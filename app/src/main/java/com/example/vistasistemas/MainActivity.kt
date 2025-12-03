@@ -30,6 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,7 +44,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.vistasistemas.ui.theme.VistaSistemasTheme
-
+import retrofit2.Call
+import retrofit2.Response
+import retrofit2.Callback // ← Agregar este import
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,17 +62,40 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun SistemasPrincipal() {
+    val rolesDisplayMap = mapOf(
+        "trabajo_social" to "Trabajo social",
+        "ludoteca" to "Ludoteca",
+        "medico" to "Medicina",
+        "recepcion" to "Recepcion",
+        "psicologia" to "Psicologia",
+        "sistemas" to "Sistemas"
+    )
 
-    val roles = listOf("Trabajo social", "Ludoteca", "Medicina", "Recepcion", "Psicologia")
-    val puestos = listOf("Coordinador", "Administrador", "Trabajador")
-
-    var usuario by remember { mutableStateOf("") }
-    var nombre by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var puesto by remember { mutableStateOf(puestos[0]) }
-    var rol by remember { mutableStateOf(roles[0]) }
+    val puestosDisplayMap = mapOf(
+        "coordinador" to "Coordinador",
+        "administrador" to "Administrador",
+        "trabajador" to "Trabajador"
+    )
 
     val context = LocalContext.current
+
+
+    var usuarios by remember { mutableStateOf(listOf<Usuario>()) }
+
+    LaunchedEffect(Unit) {
+        RetrofitClient.api.obtenerUsuarios().enqueue(object : Callback<List<Usuario>> {
+            override fun onResponse(call: Call<List<Usuario>>, response: Response<List<Usuario>>) {
+                if(response.isSuccessful){
+                    usuarios = response.body() ?: emptyList()
+                }
+            }
+
+            override fun onFailure(call: Call<List<Usuario>>, t: Throwable) {
+                t.printStackTrace()
+            }
+        })
+    }
+
 
     Box(
         modifier = Modifier
@@ -181,79 +207,27 @@ fun SistemasPrincipal() {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize().background(Color.White)
                     ) {
-                        item {
-                            Row(
-                                modifier = Modifier
-                                    .then(if (!useScroll) Modifier.fillMaxWidth() else Modifier)
-                                    .padding(horizontal = 15.dp, vertical = 4.dp)
-                                    .background(Color(230,230,250), shape = RoundedCornerShape(10.dp)),
-                                horizontalArrangement = if (!useScroll) Arrangement.SpaceBetween else Arrangement.Start,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    "Sofia Rodriguez",
-                                    color = Color(128, 0, 128),
-                                    modifier = Modifier
-                                        .padding(8.dp)
-                                        .then(
-                                            if (useScroll) Modifier.width(200.dp)
-                                            else Modifier.weight(2f)
-                                        )
-                                )
-                                Text(
-                                    "email@test.com",
-                                    color = Color(128, 0, 128),
-                                    modifier = Modifier
-                                        .padding(8.dp)
-                                        .then(
-                                            if (useScroll) Modifier.width(250.dp)
-                                            else Modifier.weight(2.5f)
-                                        )
-                                )
-                                Text(
-                                    "Coordinadora",
-                                    color = Color(128, 0, 128),
-                                    modifier = Modifier
-                                        .padding(8.dp)
-                                        .then(
-                                            if (useScroll) Modifier.width(150.dp)
-                                            else Modifier.weight(1.5f)
-                                        )
-                                )
-                                Text(
-                                    "Medicina",
-                                    color = Color(128, 0, 128),
-                                    modifier = Modifier
-                                        .padding(8.dp)
-                                        .then(
-                                            if (useScroll) Modifier.width(150.dp)
-                                            else Modifier.weight(1.5f)
-                                        )
-                                )
-                                if (useScroll) {
-                                    IconButton(modifier = Modifier.padding(8.dp), onClick = {}) {
-                                        Icon(Icons.Default.Edit, contentDescription = "Editar")
-                                    }
-                                    IconButton(modifier = Modifier.padding(8.dp), onClick = {}) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Eliminar")
-                                    }
-                                } else {
-                                    Row(
-                                        modifier = Modifier.weight(1f),
-                                        horizontalArrangement = Arrangement.End
-                                    ) {
-                                        IconButton(onClick = {}) {
-                                            Icon(Icons.Default.Edit, contentDescription = "Editar")
-                                        }
-                                        IconButton(onClick = {}) {
-                                            Icon(Icons.Default.Delete, contentDescription = "Eliminar")
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        items(usuarios.size) { index ->
+                            val usuario = usuarios[index]
 
-                        item {
+                            // Mapeo para mostrar valores amigables
+                            val puestoDisplay = when(usuario.puesto.lowercase()) {
+                                "coordinador" -> "Coordinador"
+                                "administrador" -> "Administrador"
+                                "trabajador" -> "Trabajador"
+                                else -> usuario.puesto
+                            }
+
+                            val rolDisplay = when(usuario.rol.lowercase()) {
+                                "trabajo_social" -> "Trabajo social"
+                                "ludoteca" -> "Ludoteca"
+                                "medico" -> "Medicina"
+                                "recepcion" -> "Recepcion"
+                                "psicologia" -> "Psicologia"
+                                "sistemas" -> "Sistemas"
+                                else -> usuario.rol
+                            }
+
                             Row(
                                 modifier = Modifier
                                     .then(if (!useScroll) Modifier.fillMaxWidth() else Modifier)
@@ -263,7 +237,7 @@ fun SistemasPrincipal() {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    "Sofia ",
+                                    usuario.nombre,
                                     color = Color(128, 0, 128),
                                     modifier = Modifier
                                         .padding(8.dp)
@@ -273,7 +247,7 @@ fun SistemasPrincipal() {
                                         )
                                 )
                                 Text(
-                                    "email@test.com",
+                                    usuario.email,
                                     color = Color(128, 0, 128),
                                     modifier = Modifier
                                         .padding(8.dp)
@@ -283,7 +257,7 @@ fun SistemasPrincipal() {
                                         )
                                 )
                                 Text(
-                                    "Trabajador",
+                                    puestoDisplay,
                                     color = Color(128, 0, 128),
                                     modifier = Modifier
                                         .padding(8.dp)
@@ -293,7 +267,7 @@ fun SistemasPrincipal() {
                                         )
                                 )
                                 Text(
-                                    "Trabajo social",
+                                    rolDisplay,
                                     color = Color(128, 0, 128),
                                     modifier = Modifier
                                         .padding(8.dp)
